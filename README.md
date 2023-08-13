@@ -1,0 +1,4 @@
+Deberán conectarse a un WebSocket que entregará eventos sobre posiciones de aviones las cuales se van actualizando en tiempo real.
+Cada uno deberá construir un sitio web que permita desplegar esta información en un mapa, que muestre todas las rutas disponibles, y posición de los aviones la cual se debe ir actualizando en la medida que se van recibiendo eventos.
+Adicionalmente,se debe implementar un sistema de chat, que permita enviar y recibir mensajes de texto, tanto del resto de los usuarios conectados como de los vuelos en curso.
+En esta tarea no se debe guardar información en bases de datos, solo se debe mostrar la información que se empezó a consumir desde que se inició la conexión con el WebSocket.

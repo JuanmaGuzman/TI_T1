@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset = "utf-8" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css"
+        integrity="sha512-hoalWLoI8r4UszCkZ5kL8vayOGVae1oxXe/2A4AO6J9+580uKHDO3JdHb7NzwwzK5xr/Fs0W40kiNHxM9vyTtQ=="
+        crossorigin=""/>
+        <script src="https://unpkg.com/leaflet@1.8.0/dist/leaflet.js"
+        integrity="sha512-BB3hKbKWOc9Ez/TAwyWxNXeoV9c1v6FIeYiBieIWkpLjauysF18NzgR1MBNBXf8/KABdlkX68nAhlwcDFLGPCQ=="
+        crossorigin=""></script>
+    </head>
+        <style>
+            body {
+                background-image: linear-gradient(to right, #DECBA4, #3E5151);
+            }
+
+            #header {
+                width: 100%;
+                height: 80px;
+            }
+
+            #tittle_img {
+                float: left;
+                margin-top: 20px;
+                margin-right: 15px;
+            }
+
+            #chat_tittle {
+                float: right;
+                margin-right: 13%;
+            }
+
+            #tittle {
+                float: left;
+            }
+
+            #container {
+                width: 100%;
+                margin: auto;
+            }
+
+            #map    {
+                width: 66%;
+                height: 516px;
+                float: left;
+                border: 2px solid black;
+                padding: 5px;
+                margin-bottom: 30px;
+            }
+
+            #output {
+                width: 30%;
+                float: right;
+                margin-left: 2px;
+                background-image: linear-gradient(to right, #DECBA4, #3E5151);
+                height: 450px;
+            }
+
+            #chating {
+                width: 30%;
+                float: right;
+                margin-left: 2px;
+                background-image: linear-gradient(to right, #DECBA4, #3E5151);
+                margin-top: 2px;
+                height: 50px;
+                margin-bottom: 30px;
+                border: 2px solid black;
+                padding: 5px;
+            }
+
+            table {
+                width: 100%;
+                align-self: center;
+                margin-top: 30px;
+                border-collapse: collapse;
+                border: 2px solid black;
+            }
+
+            td, th {
+                border: 2px solid black;
+                padding: 10px;
+            }
+            th {
+                font-weight: bold;
+            }
+
+            /* width */        
+            ::-webkit-scrollbar {
+                width: 15px;
+                border-radius: 10%;
+            }
+    
+            /* Track */
+            ::-webkit-scrollbar-track {
+                background: #f1f1f1;
+            }
+    
+            /* Handle */
+            ::-webkit-scrollbar-thumb {
+                background: #888;
+            }
+    
+            /* Handle on hover */
+            ::-webkit-scrollbar-thumb:hover {
+                background: #555;
+            }
+            
+            .scroll {
+                display: block;
+                width: 30%;
+                height: 400px;
+                overflow-y: scroll;
+                border: 2px solid black;
+                padding: 5px;
+            }
+
+            .footer {
+                height: 100px;
+            }
+
+            #name {
+                width: 70%;
+                height: 40px;
+                background-color: white;
+                color: black;
+                border: 2px solid black;                   
+            }
+
+            #sb {
+                margin-left: 10px;
+                width: 20%;
+                height: 45px;
+                background-color: white;
+                color: black;
+                border: 2px solid black;           
+            }
+
+        </style>
+
+            <body language = "javascript" type = "text/javascript">
+                <script>
+                    var wsUri = "wss://tarea-1.2022-2.tallerdeintegracion.cl/connect";
+                    console.log("connected");
+                    var active_flights = []; 
+                    var output;
+                </script>
+                <div id="header">
+                    <div><img src="icono_pagina.png" alt="Icono" id="tittle_img"></div>
+                    <div><h1 id="tittle">Air traffic live</h1></div>
+                    <div><h1 id="chat_tittle">Chat</h1></div>
+                </div>
+                <div id="container">
+                    <div id="map"> 
+                        <script>
+                            var map = L.map('map', {zoomDelta: 0.25,zoomSnap: 0});
+                            var cartodbAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attribution">CARTO</a>';
+                            var positron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {attribution: cartodbAttribution}).addTo(map);
+                            map.setView([0, 0], 2.5);
+                        </script>
+                    </div>
+                    <div class="scroll" id = "output"></div>
+                    <div id="chating">
+                        <form id="form">
+                            <div class="container">
+                                <input id="name" placeholder="Write your message." type="text" name="Name" />
+                                <input id="sb" type="submit" value="Send"/>
+                            </div>
+                            <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js">
+                            </script>
+                            <script type="text/javascript">
+                            $(document).ready(function() {
+                                $('form').on('submit', function(event) {
+                                    event.preventDefault();
+                                    
+                                    // It returns a array of object
+                                    let userinfo = $(this).serializeArray();
+                                    let user = {};
+                                    userinfo.forEach((value) => {
+                                        
+                                        // Dynamically create an object
+                                        user[value.name] = value.value;
+                                    });
+                                    let url = "https://reqres.in/api/users";
+                                    $.ajax({
+                                        method: "POST",
+                                        url: url,
+                                        data: user
+                                    }).done(function(msg) {
+                                        var new_message = msg.Name
+                                        //$('span').text(msg.Name);
+/*                                         var currentdate = new Date(); 
+                                        var datetime = currentdate.getFullYear() + "-" + (currentdate.getMonth()+1) + "-" + currentdate.getDate() + " " + currentdate.getHours() + ":" + currentdate.getMinutes() + ":" + currentdate.getSeconds();
+                                        var message = `(info) ${datetime}`
+                                        writeToScreen(message);              
+                                        var message = `From you.`       
+                                        writeToScreen(message);   */     
+
+                                        // enviamos msj:
+                                        var message = JSON.stringify({"type": "chat", "content": `${new_message}`});
+                                        doSend(message);
+                                        
+                                    }).fail(function(err, textstatus, error) {
+                                        //$('span').text(textstatus);
+                                    });
+                                });
+                            });
+                        
+                            </script>
+                            <span class="container"></span>
+                        </form>
+                    </div>
+                </div>
+                <div id="table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Flight</th>
+                                <th>Departure time</th>
+                                <th>Origin</th>
+                                <th>Destination</th>
+                                <th>ETA</th>
+                                <th>Captain</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableData">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="footer">
+                    <h3>Juan Martín Guzmán Salas - Tarea 1</h3>
+                </div>
+                <script>
+                    
+                function activeAirplanes(flight_id, departure_date, departure_airport, departure_city, departure_country, departure_location, 
+                destination_airport, destination_city, destination_country, destination_location, position, heading, captain, airline, actual_eta, last_eta, distance, arrival, estado, status) {
+                    this.flight_id = flight_id;
+                    this.departure_date = departure_date;
+                    this.departure_airport = departure_airport;
+                    this.departure_city = departure_city;
+                    this.departure_country = departure_country;
+                    this.departure_location = departure_location;
+                    this.destination_airport = destination_airport;
+                    this.destination_city = destination_city;
+                    this.destination_country = destination_country;
+                    this.destination_location = destination_location;
+                    this.position = position;
+                    this.heading = heading;
+                    this.captain = captain;
+                    this.airline = airline;
+                    this.actual_eta = actual_eta;
+                    this.last_eta = last_eta;
+                    this.distance = distance;
+                    this.arrival = arrival;
+                    this.estado = estado;
+                    this.status = status;
+                };
+
+                function init() {
+                    output = document.getElementById("output");
+                    testWebSocket();
+                }
+                    
+                function testWebSocket() {
+                    websocket = new WebSocket(wsUri);
+                        
+                    websocket.onopen = function(evt) {
+                        onOpen(evt)
+                    };
+                    
+                    websocket.onmessage = function(evt) {
+                        onMessage(evt)
+                    };
+                    
+                    websocket.onerror = function(evt) {
+                        onError(evt)
+                    };
+                }
+                    
+                function onOpen(evt) {
+                    //writeToScreen('CONNECTED');
+                    var message = JSON.stringify({"type": "join", "id": "36857cb2-e7f6-4550-8bb5-295a357aa3b3", "username": "Juanma G."});
+                    doSend(message);
+                }
+                    
+                function onMessage(evt) {
+                    //writeToScreen('<span style = "color: blue;">RESPONSE: ' + evt.data + '</span>'); 
+                    var text = evt.data;
+                    var obj = JSON.parse(text);
+                    
+                    if (obj.type == "flights") {
+                        // save flights data
+                        var flights_ids = Object.keys(obj['flights']);
+                        var len = flights_ids.length;
+
+                        for (let i = 0; i < len; i++) {
+                            var flight_id = flights_ids[i];  
+
+                            // filter a ayuda a crear una nueva lista de objetos filtrados según algún criterio.
+                            var search_airplane = active_flights.filter(function(airplane) { 
+                                return airplane.flight_id == flight_id
+                            });
+
+                            if (search_airplane.length == 0) {
+                                // Si el ID no esta en active flights, agregamos:
+                                var departure_date = obj['flights'][flight_id]['departure_date'];
+                                var departure_airport = [obj['flights'][flight_id]['departure']['id'], obj['flights'][flight_id]['departure']['name']];
+                                var departure_city = [obj['flights'][flight_id]['departure']['city']['id'], obj['flights'][flight_id]['departure']['city']['name']];
+                                var departure_country = [obj['flights'][flight_id]['departure']['city']['country']['id'], obj['flights'][flight_id]['departure']['city']['country']['name']];
+                                var departure_location = [obj['flights'][flight_id]['departure']['location']['lat'], obj['flights'][flight_id]['departure']['location']['long']];
+                                var destination_airport = [obj['flights'][flight_id]['destination']['id'], obj['flights'][flight_id]['destination']['name']];
+                                var destination_city = [obj['flights'][flight_id]['destination']['city']['id'], obj['flights'][flight_id]['destination']['city']['name']];
+                                var destination_country = [obj['flights'][flight_id]['destination']['city']['country']['id'], obj['flights'][flight_id]['destination']['city']['country']['name']];         
+                                var destination_location = [obj['flights'][flight_id]['destination']['location']['lat'], obj['flights'][flight_id]['destination']['location']['long']];
+                                active_flights.push(new activeAirplanes(flight_id, departure_date, departure_airport, departure_city, departure_country, departure_location, destination_airport, 
+                                destination_city, destination_country, destination_location, null, null, null, null, null, null, null, null, null, 0))
+                            }
+                            else {
+                                // Si el ID esta en active flights, no hacemos nada:
+                            }
+                        }
+
+                        for (let airplane of active_flights) {
+                            if (flights_ids.includes(airplane.flight_id) == true) {
+                                // pass
+                                console.log("Avion esta activo.")
+                            }
+                            else {
+                                // eliniamos aeropuerto que no este en active flights
+                                console.log("Avion inactivo, elimniamos.")
+                                var index = active_flights.indexOf(airplane);
+                                active_flights.splice(index, 1);
+                            }
+                        }
+/* 
+                        if (active_flights.length > 0 && active_flights[0].captain !== null) {
+                            console.log("actualizar pos");
+                            loadAirports(active_flights);
+                        } */                      
+                    } 
+
+                    else if (obj.type == "plane") {
+                        // save plane data
+                        var flight_id = obj['plane']['flight_id'];
+
+                        // encontrar objeto con id igual, agregar parámetros
+                        var search_airplane = active_flights.filter(function(airplane) {
+                            return airplane.flight_id == flight_id;
+                        });
+
+                        var position = [obj['plane']['position']['lat'], obj['plane']['position']['long']];
+                        var heading = [obj['plane']['position']['lat'], obj['plane']['position']['long']];
+                        var captain = obj['plane']['captain'];
+                        var airline = [obj['plane']['airline']['id'], obj['plane']['airline']['name']];
+                        var eta = obj['plane']['ETA'];
+                        var distance = obj['plane']['distance'];
+                        var arrival = obj['plane']['arrival'];
+                        var estado = obj['plane']['status'];
+
+
+                        if (search_airplane.length > 0) {
+                            // agregamos parámetros si el avión esta activo
+                            search_airplane[0].position = position;
+                            search_airplane[0].heading = heading;
+                            search_airplane[0].captain = captain;
+                            search_airplane[0].airline = airline;
+                            search_airplane[0].actual_eta = eta;
+                            search_airplane[0].distance = distance;
+                            search_airplane[0].arrival = arrival;
+                            search_airplane[0].estado = estado;
+
+                            if (search_airplane[0].status == 0) {
+                                // primera vez que graficamos avión
+                                search_airplane[0].last_eta = eta;
+                                search_airplane[0].status = 1;
+                                loadTableData(active_flights);
+                                loadAirports(active_flights);
+                            }
+
+                            else if (Number(search_airplane[0].actual_eta) + 0.5 < search_airplane[0].last_eta) {
+                                search_airplane[0].last_eta = eta;
+                                loadTableData(active_flights);
+                                loadAirports(active_flights);
+                            }
+                        }
+
+                        for (let airplane of active_flights) {
+                            if (flight_id == airplane.flight_id) {
+                                var index = active_flights.indexOf(airplane);
+                                active_flights[index] = search_airplane[0];
+                            }
+                        }
+
+                        function loadTableData(active_flights) {
+                            
+                            const tableBody = document.getElementById('tableData');
+                            let dataHtml = '';
+                            
+                            for (let af of active_flights) {
+                                
+                                dataHtml += `<tr><td>${af.flight_id}</td>
+                                    <td>${af.departure_date}</td>
+                                    <td>${af.departure_airport}; ${af.departure_city[1]}; ${af.departure_country[1]}</td>
+                                    <td>${af.destination_airport}; ${af.destination_city[1]}; ${af.destination_country[1]}</td>
+                                    <td>${af.actual_eta}</td>
+                                    <td>${af.captain}</td></tr>`
+
+                                    tableBody.innerHTML = dataHtml;
+                                }
+                        }
+
+                    } 
+
+                    else if (obj.type == "take-off") {
+                        var flight_id = obj['flight_id'];
+                        console.log(flight_id);
+                        loadSignals("take-off", flight_id, active_flights);
+                    } 
+                    else if (obj.type == "landing") {
+                        console.log(text);
+                        var flight_id = obj['flight_id'];
+                        loadSignals("landing", flight_id, active_flights);
+                    } 
+                    else if (obj.type == "crashed") {
+                        console.log(text);
+                        var flight_id = obj['flight_id'];
+                        loadSignals("crashed", flight_id, active_flights);
+                    } 
+                    else if (obj.type == "message") {
+                        var flight_id = obj['message']['flight_id'];
+                        var level = obj['message']['level'];
+                        var date = obj['message']['date'];
+                        var name = obj['message']['name'];
+                        var content = obj['message']['content'];
+                        loadChat(flight_id, level, date, name, content);
+                    }
+                }
+
+                function onError(evt) {
+                    writeToScreen('<span style="color: red;">ERROR:</span> ' + evt.data);
+                }
+                    
+                function doSend(message) {
+                    websocket.send(message);
+                }
+                    
+                function writeToScreen(message) {
+                    var pre = document.createElement("p"); 
+                    pre.style.wordWrap = "break-word"; 
+                    pre.innerHTML = message; output.appendChild(pre);
+                }
+                    
+                window.addEventListener("load", init, false);
+  
+                var dp_airport_markers = [];
+                var ds_airport_markers = [];
+                var conection_markers = [];
+                var airplane_markers = [];
+                var takeoff_markers = [];
+                var landing_markers = [];
+                var crashed_markers = [];
+
+                function loadAirports(active_flights) {
+
+                    for (let x of dp_airport_markers) {
+                        map.removeLayer(x);
+                    }
+
+                    for (let x of ds_airport_markers) {
+                        map.removeLayer(x);
+                    }
+
+                    for (let x of conection_markers) {
+                        map.removeLayer(x);
+                    }
+
+                    for (let x of airplane_markers) {
+                            map.removeLayer(x);
+                    }
+
+                    if (takeoff_markers.length > 3) {
+                        for (let x of takeoff_markers) {
+                            map.removeLayer(x);
+                        }
+                        takeoff_markers = [];                      
+                    }
+
+                    if (landing_markers.length > 3) {
+                        for (let x of landing_markers) {
+                            map.removeLayer(x);
+                        }
+                        landing_markers = [];                      
+                    }
+
+                    if (crashed_markers.length > 2) {
+                        for (let x of crashed_markers) {
+                            map.removeLayer(x);
+                        }
+                        crashed_markers = [];                      
+                    }
+
+                    dp_airport_markers = [];
+                    ds_airport_markers = [];
+                    conection_markers = [];
+                    airplane_markers = [];  
+
+                    for (let af of active_flights) {
+
+                        // Aeropuertos:
+                        var dp_airport_icon = L.Icon.extend({options: {iconUrl: 'alfiler.png', iconSize: [22, 22],iconAnchor: [5, 5], popupAnchor: [-30, -10]}});
+                        var ds_airport_icon = L.Icon.extend({options: {iconUrl: 'alfiler-de-papel.png', iconSize: [22, 22],iconAnchor: [5, 5], popupAnchor: [-30, -10]}});
+                        var dp_airport = new dp_airport_icon();
+                        var ds_airport = new ds_airport_icon();
+                        var dp_airport_marker = L.marker([af.departure_location[0], af.departure_location[1]], {icon: dp_airport}).addTo(map).bindPopup(`Departure airport: ${af.flight_id}; ${af.departure_airport[1]}; ${af.departure_city[1]}; ${af.departure_country[1]}`);
+                        var ds_airport_marker = L.marker([af.destination_location[0], af.destination_location[1]], {icon: ds_airport}).addTo(map).bindPopup(`Destination airport: ${af.flight_id}; ${af.destination_airport[1]}; ${af.destination_city[1]}; ${af.destination_country[1]}`);
+                        dp_airport_markers.push(dp_airport_marker); 
+                        ds_airport_markers.push(ds_airport_marker);
+
+                        // Conecciones:
+                        var latlngs = [[af.departure_location[0], af.departure_location[1]],[af.destination_location[0], af.destination_location[1]],[34.04, -118.2]];
+                        var polyline = L.polyline(latlngs, {color: '#ADD8E6' }).addTo(map);
+                        conection_markers.push(polyline);
+
+                        // Aviones:
+                        if (af.captain !== null) {
+                            var airplane_icon = L.Icon.extend({options: {iconUrl: 'punto-de-alfiler.png', iconSize: [25, 25],iconAnchor: [5, 5], popupAnchor: [-30, -10]}});
+                            var airplane = new airplane_icon();
+                            var airplane_marker = L.marker([af.position[0], af.position[1]], {icon: airplane}).addTo(map).bindPopup(`${af.flight_id}; ${af.airline[0]}; ${af.captain}; ${af.actual_eta}; ${af.estado}`);
+                            airplane_markers.push(airplane_marker);
+                            }
+                        } 
+                    }
+
+                    function loadSignals(type, flight_id, active_flights) {
+
+                        // encontrar objeto con id igual, agregar parámetros
+                        var search_airplane = active_flights.filter(function(airplane) {
+                            return airplane.flight_id == flight_id;
+                        });
+
+                        // Evento:
+                        if (type == "take-off") {
+                            var event_icon = L.Icon.extend({options: {iconUrl: 'bell.png', iconSize: [18, 18],iconAnchor: [5, 5], popupAnchor: [-30, -10]}});
+                            var event = new event_icon();
+                            var take_off = L.marker([search_airplane[0].departure_location[0] + 1.5, search_airplane[0].departure_location[1] + 2.5], {icon: event}).addTo(map).bindPopup(`Take-off: Airplane ${search_airplane[0].flight_id} in ${search_airplane[0].departure_airport[1]}`);
+                            takeoff_markers.push(take_off)
+                        }
+                        else if (type == "landing") {
+                            var event_icon = L.Icon.extend({options: {iconUrl: 'check.png', iconSize: [18, 18],iconAnchor: [5, 5], popupAnchor: [-30, -10]}});
+                            var event = new event_icon();
+                            var landing = L.marker([search_airplane[0].departure_location[0] - 1.5, search_airplane[0].departure_location[1] - 2.5], {icon: event}).addTo(map).bindPopup(`Landing: Airplane ${search_airplane[0].flight_id} in ${search_airplane[0].destination_airport[1]}`);
+                            landing_markers.push(landing)
+                        }
+                        else if (type == "crashed") {
+                            var event_icon = L.Icon.extend({options: {iconUrl: 'alert.png', iconSize: [18, 18],iconAnchor: [5, 5], popupAnchor: [-30, -10]}});
+                            var event = new event_icon();
+                            var crashed = L.marker([search_airplane[0].departure_location[0], search_airplane[0].departure_location[1]], {icon: event}).addTo(map).bindPopup(`${search_airplane[0].flight_id} CRASHED!`);
+                            crashed_markers.push(crashed)
+                        }
+                    }
+
+                    function loadChat(flight_id, level, date, name, content) {
+                                var message = `(${level}) ${date}`
+                                writeToScreen(message);              
+                                var message = `Flight: ${flight_id}; Captain: ${name}.`       
+                                writeToScreen(message);       
+                                var message = `${content}.`;
+                                writeToScreen(message);
+                                writeToScreen("----------------------------------------------------------------------------");
+                            }
+            </script>
+        </body>
+</html>
+
